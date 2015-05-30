@@ -1,54 +1,102 @@
 #!/usr/bin/env python
-# import operator
+import operator
 from random import choice
 
+OPERATOR_SLUGS = {
+    '+': 'add',
+    '-': 'sub',
+    'x': 'mul',
+    # '/': 'add',
+}
 
-def problems(num_problems=10, number_sizes=1, problem_size=2):
-    """
-    Returns a sequence of num_problems problems.
 
-    Arguments:
-        num_problems=10 - The number of problems to generate.
-        number_sizes=1 - The size of the numbers to use. One, two, etc digits.
-        problem_size=2 - The number of numbers to use in the problems.
-    """
+def solve_problem(numbers, op):
+    numbers = list(numbers)
+    rtn = numbers.pop(0)
+    do = getattr(operator, OPERATOR_SLUGS[op])
+    for n in numbers:
+        rtn = do(rtn, n)
+    return rtn
+
+
+def _gen_problems(numbers, operators,
+                  num_problems=10,
+                  problem_size=2,
+                  bottom_numbers=None):
+    problem_sets = _gen_problem_number_tuples(numbers,
+                                              num_problems,
+                                              bottom_numbers,
+                                              problem_size)
+    for nums in problem_sets:
+        yield tuple([nums, choice(operators)])
+
+
+def _gen_numbers(number_sizes=1):
+    return [n for n in range(10**number_sizes)]
+
+
+def _gen_problem_number_tuples(numbers,
+                               num_problems=10,
+                               bottom_numbers=None,
+                               problem_size=2):
     problem_size = problem_size if problem_size > 2 else 2
-    number_sizes = number_sizes if number_sizes > 1 else 1
-    problem_size = problem_size if problem_size > 1 else 1
-
-    numbers = [n for n in range(10**number_sizes)]
+    problem_sets = []
 
     for _ in range(num_problems):
-        yield tuple(sorted([choice(numbers) for _ in range(problem_size)],
-                           reverse=True))
+        if bottom_numbers:
+            problem_sets.append(tuple(sorted([choice(numbers),
+                                              choice(bottom_numbers)],
+                                             reverse=True)))
+        else:
+            problem_sets.append(tuple(sorted([choice(numbers)
+                                              for _ in range(problem_size)],
+                                             reverse=True)))
+    return problem_sets
 
 
-def _gen_problem_string(problem_size, operation_symbol='+'):
+def _gen_problem_string(numbers, op):
     str_problem = ''
-    for _ in range(problem_size - 1):
+    for _ in range(len(numbers) - 1):
         str_problem += '{:>5}\n'
-    str_problem += operation_symbol + '{:>4}\n=====\n\n'
+    str_problem += op + '{:>4}\n=====\n\n'
     return str_problem
 
 
-def print_problems(operation_symbol='+', problem_size=2, **kwargs):
-    str_problem = _gen_problem_string(problem_size, operation_symbol)
-    for problem in problems(problem_size=problem_size, **kwargs):
-        print(str_problem.format(*problem))
+def print_problems(problems):
+    for problem in problems:
+        numbers, op = problem
+        str_problem = _gen_problem_string(numbers, op)
+        print(str_problem.format(*numbers))
 
 
-def addition_problems(**kwargs):
-    print_problems('+', **kwargs)
+def gen_random_problems(number_sizes=1, operators=['+'], **kwargs):
+    return _gen_problems(_gen_numbers(number_sizes), operators, **kwargs)
 
 
-def subtraction_problems(**kwargs):
-    print_problems('-', **kwargs)
+def gen_specific_problems(number_sizes=1, operators=['x'],
+                          bottom_numbers=[1, 2, 3, 4, 5, 10], **kwargs):
+    return _gen_problems(_gen_numbers(number_sizes), operators,
+                         bottom_numbers=bottom_numbers, **kwargs)
 
 
-def multiplication_problems(problem_size=2, **kwargs):
-    print_problems('x', **kwargs)
+def solve_problems(problems):
+    grade = 0
+    total_problems = 0
+    for prob in problems:
+        total_problems += 1
+        numbers, op = prob
+        print(_gen_problem_string(numbers, op).format(*numbers))
+        solution = solve_problem(numbers, op)
+        submitted_solution = int(input())
+        if submitted_solution == solution:
+            print('Right!')
+            grade += 1
+        else:
+            print('Wrong :(')
+            print('The answer was: {}'.format(submitted_solution))
+    print('You got {}%'.format((grade / total_problems) * 100))
 
 
 if __name__ == '__main__':
-    # addition_problems(num_problems=2, number_sizes=3)
-    multiplication_problems(number_sizes=2)
+    # print(list(gen_random_problems()))
+    solve_problems(gen_random_problems(num_problems=5))
